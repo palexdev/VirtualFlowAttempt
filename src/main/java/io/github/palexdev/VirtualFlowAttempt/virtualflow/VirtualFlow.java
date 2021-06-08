@@ -2,6 +2,7 @@ package io.github.palexdev.VirtualFlowAttempt.virtualflow;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ListProperty;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.geometry.Orientation;
@@ -9,17 +10,17 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 
-import java.util.List;
+import java.util.function.Function;
 
-public class VirtualFlow<T extends Cell> extends Region {
+public class VirtualFlow<T, C extends Cell> extends Region {
     private final ScrollBar scrollBar;
-    private final VirtualFlowContainer<T> container;
+    private final VirtualFlowContainer<T, C> container;
 
-    public VirtualFlow(List<T> cells) {
+    public VirtualFlow(ObservableList<T> items, Function<T, C> globalCellFactory) {
         scrollBar = new ScrollBar();
         scrollBar.setOrientation(Orientation.VERTICAL);
 
-        container = new VirtualFlowContainer<>(cells);
+        container = new VirtualFlowContainer<>(this, items, globalCellFactory);
 
         getChildren().setAll(container, scrollBar);
         initialize();
@@ -48,12 +49,16 @@ public class VirtualFlow<T extends Cell> extends Region {
         scrollBar.valueProperty().addListener((ov, old_val, new_val) -> container.setLayoutY(-new_val.doubleValue()));
     }
 
-    public ListProperty<T> getCells() {
-        return container.getCells();
+    public ObservableList<T> getItems() {
+        return container.getItems();
     }
 
-    public void setCells(List<T> cells) {
-        container.setCells(cells);
+    public ListProperty<T> itemsProperty() {
+        return container.itemsProperty();
+    }
+
+    public void setItems(ObservableList<T> items) {
+        container.setItems(items);
     }
 
     public void setSpeed(double unit, double block) {

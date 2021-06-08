@@ -5,13 +5,13 @@ import io.github.palexdev.VirtualFlowAttempt.virtualflow.VirtualFlow;
 import io.github.palexdev.materialfx.effects.DepthLevel;
 import io.github.palexdev.materialfx.effects.MFXDepthManager;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class VirtualFlowAttempt extends Application {
@@ -20,9 +20,10 @@ public class VirtualFlowAttempt extends Application {
     public void start(Stage primaryStage) {
         StackPane stackPane = new StackPane();
 
-        List<SimpleCell> cells = IntStream.range(0, 10).mapToObj(i -> new SimpleCell()).collect(Collectors.toList());
+        ObservableList<String> cells = FXCollections.observableArrayList();
+        IntStream.range(1, 16).mapToObj(i -> "String " + i).forEach(cells::add);
 
-        VirtualFlow<SimpleCell> virtualFlow = new VirtualFlow<>(cells);
+        VirtualFlow<String, SimpleCell<String>> virtualFlow = new VirtualFlow<>(cells, SimpleCell::new);
         virtualFlow.setPrefSize(300, 150);
         virtualFlow.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         virtualFlow.setEffect(MFXDepthManager.shadowOf(DepthLevel.LEVEL1));
