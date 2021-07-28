@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Test All" type="JUnit" factoryName="JUnit">
+    <module name="VirtualFlowAttempt.test" />
+    <option name="ALTERNATIVE_JRE_PATH" value="15" />
+    <option name="MAIN_CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="directory" />
+    <dir value="$PROJECT_DIR$/src/test/java/io/github/palexdev/VirtualFlowAttempt" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

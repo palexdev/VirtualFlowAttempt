@@ -11,6 +11,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.scenicview.ScenicView;
 
 import java.util.stream.IntStream;
 
@@ -34,5 +35,7 @@ public class VirtualFlowAttempt extends Application {
         primaryStage.setTitle("VirtualFlow Attempt");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        ScenicView.show(scene);
     }
 }

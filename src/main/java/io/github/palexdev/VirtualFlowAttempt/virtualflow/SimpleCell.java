@@ -18,4 +18,9 @@ public class SimpleCell<T> implements Cell {
     public Node getNode() {
         return label;
     }
+
+    @Override
+    public double getFixedHeight() {
+        return 32;
+    }
 }

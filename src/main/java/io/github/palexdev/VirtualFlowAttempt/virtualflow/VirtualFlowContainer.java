@@ -1,31 +1,30 @@
 package io.github.palexdev.VirtualFlowAttempt.virtualflow;
 
-import javafx.beans.InvalidationListener;
+import io.github.palexdev.materialfx.utils.NumberUtils;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.control.IndexRange;
+import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Rectangle;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class VirtualFlowContainer<T, C extends Cell> extends Region {
-    private final VirtualFlow<T, C> virtualFlow;
-    private final ListProperty<T> items = new SimpleListProperty<>();
     private final ListProperty<C> cells = new SimpleListProperty<>(FXCollections.observableArrayList());
-    private final ObjectProperty<Function<T, C>> globalCellFactory = new SimpleObjectProperty<>();
+    private final VirtualFlow<T, C> virtualFlow;
+    private final LayoutManager manager;
 
-    public VirtualFlowContainer(VirtualFlow<T, C> virtualFlow, ObservableList<T> items, Function<T, C> globalCellFactory) {
+    public VirtualFlowContainer(VirtualFlow<T, C> virtualFlow) {
         this.virtualFlow = virtualFlow;
-        setGlobalCellFactory(globalCellFactory);
-        setItems(items);
-
+        manager = new LayoutManager();
         initialize();
     }
 
@@ -33,14 +32,12 @@ public class VirtualFlowContainer<T, C extends Cell> extends Region {
         setStyle("-fx-border-color: gold");
         buildClip();
 
-        items.addListener((InvalidationListener) invalidated -> handleCells());
+        addListeners();
+    }
 
-        globalCellFactory.addListener(invalidated -> {
-            getChildren().clear();
-            handleCells();
-        });
-
-        handleCells();
+    private void addListeners() {
+        virtualFlow.heightProperty().addListener((observable, oldValue, newValue) -> manager.init());
+        layoutYProperty().addListener((observable, oldValue, newValue) -> manager.update());
     }
 
     private void buildClip() {
@@ -51,58 +48,95 @@ public class VirtualFlowContainer<T, C extends Cell> extends Region {
         setClip(rectangle);
     }
 
-    protected void handleCells() {
-        buildCells();
-        List<Node> nodes = cells.stream()
-                .map(Cell::getNode)
-                .collect(Collectors.toList());
-        getChildren().setAll(nodes);
-    }
+    private class LayoutManager {
+        private final ObjectProperty<IndexRange> cellsRange = new SimpleObjectProperty<>(new IndexRange(0, 0));
+        private final ObjectProperty<Bounds> viewportBounds = new SimpleObjectProperty<>();
+        private double lastPosition = 0;
 
-    protected void buildCells() {
-        List<C> tmp = items.stream()
-                .map(item -> getGlobalCellFactory().apply(item))
-                .collect(Collectors.toList());
-        cells.setAll(tmp);
-    }
+        public LayoutManager() {
+            viewportBounds.bind(Bindings.createObjectBinding(() -> {
+                        Bounds viewportBounds = virtualFlow.getLayoutBounds();
+                        Bounds viewportBoundsInScene = virtualFlow.localToScene(viewportBounds);
+                        return sceneToLocal(viewportBoundsInScene);
+                    }, layoutYProperty(), layoutXProperty())
+            );
+        }
 
-    public ObservableList<T> getItems() {
-        return items.get();
-    }
+        protected void init() {
+            // Build all cells and compute max height
+            cells.setAll(virtualFlow.getItems().stream()
+                    .map(item -> virtualFlow.getCellFactory().apply(item))
+                    .collect(Collectors.toList())
+            );
+            setPrefHeight(cells.stream().mapToDouble(C::getFixedHeight).sum());
 
-    public ListProperty<T> itemsProperty() {
-        return items;
-    }
+            // Position first cells
+            int start = 0;
+            int end = findMaxIndex();
+            int overscanEnd = NumberUtils.clamp(end + virtualFlow.getOverscan(), 0, cells.size());
+            setCellsRange(new IndexRange(start, overscanEnd));
+            System.out.println("Max is: " + end);
+            addAndPosition(cells.subList(start, overscanEnd + 1));
+        }
 
-    public void setItems(ObservableList<T> items) {
-        this.items.set(items);
-    }
+        protected void update() {
+            C lastOverscan = cells.get(getCellsRange().getEnd());
+            System.out.println("Last is: " + ((Label) lastOverscan.getNode()).getText());
 
-    public Function<T, C> getGlobalCellFactory() {
-        return globalCellFactory.get();
-    }
+            if (!(cells.indexOf(lastOverscan) == cells.size() - 1) && isCellPartiallyVisible(lastOverscan)) {
+                System.out.println("Should add " + virtualFlow.getOverscan() + " cells");
+                int start = NumberUtils.clamp(getCellsRange().getEnd() + 1, 0, cells.size());
+                int end = NumberUtils.clamp(getCellsRange().getEnd() + virtualFlow.getOverscan(), 0, cells.size() - 1);
+                setCellsRange(new IndexRange(getCellsRange().getStart(), end));
+                addAndPosition(cells.subList(start, end + 1));
+            }
+        }
 
-    public ObjectProperty<Function<T, C>> globalCellFactoryProperty() {
-        return globalCellFactory;
-    }
+        private boolean isCellVisible(C cell) {
+            return getViewportBounds().contains(cell.getBounds());
+        }
 
-    public void setGlobalCellFactory(Function<T, C> globalCellFactory) {
-        this.globalCellFactory.set(globalCellFactory);
-    }
+        private boolean isCellPartiallyVisible(C cell) {
+            return getViewportBounds().intersects(cell.getBounds());
+        }
 
-    @Override
-    protected void layoutChildren() {
-        super.layoutChildren();
+        private void addAndPosition(List<C> cells) {
+            double y = lastPosition;
+            for (C cell : cells) {
+                Node node = cell.getNode();
+                getChildren().add(node);
+                node.resizeRelocate(0, y, node.prefWidth(-1), cell.getFixedHeight());
+                y += cell.getFixedHeight();
+                lastPosition = y;
+            }
+        }
 
-        double increase = 0;
-        double x = 0;
-        double y = 0;
-        for (C cell : cells) {
-            Node node = cell.getNode();
-            double height = node.prefHeight(-1) + increase;
-            node.resizeRelocate(x, y, getWidth(), height);
-            y += height;
-            //increase += 5; TODO variable height testing
+        private int findMaxIndex() {
+            double height = 0;
+            int max = 0;
+
+            while (true) {
+                C cell = cells.get(max);
+                height += cell.getFixedHeight();
+                if (height <= virtualFlow.getHeight()) {
+                    max++;
+                } else {
+                    break;
+                }
+            }
+            return max;
+        }
+
+        public IndexRange getCellsRange() {
+            return cellsRange.get();
+        }
+
+        public void setCellsRange(IndexRange cellsRange) {
+            this.cellsRange.set(cellsRange);
+        }
+
+        public Bounds getViewportBounds() {
+            return viewportBounds.get();
         }
     }
 }
