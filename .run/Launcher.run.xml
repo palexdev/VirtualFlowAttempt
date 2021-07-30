@@ -4,7 +4,7 @@
     <module name="VirtualFlowAttempt.main" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="io.github.palexdev.VirtualFlowAttempt.*" />
+        <option name="PATTERN" value="io.github.palexdev.VirtualFlowAttempt.simulation.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

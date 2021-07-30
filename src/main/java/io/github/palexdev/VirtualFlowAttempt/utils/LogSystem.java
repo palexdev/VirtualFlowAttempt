@@ -1,4 +1,4 @@
-package io.github.palexdev.VirtualFlowAttempt.log;
+package io.github.palexdev.VirtualFlowAttempt.utils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,6 +28,10 @@ public class LogSystem {
     }
 
     public static void debug(String fileName, List<String> logs) {
+        debug(fileName, logs, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    public static void debug(String fileName, List<String> logs, StandardOpenOption mode) {
         Callable<Void> debugTask = () -> {
             Path debug = Paths.get("").toAbsolutePath().resolve("logs/" + fileName);
 
@@ -39,7 +43,25 @@ public class LogSystem {
                     Files.createDirectories(debug.getParent());
                     Files.createFile(debug);
                 }
-                Files.writeString(debug, sb, StandardOpenOption.TRUNCATE_EXISTING);
+                Files.writeString(debug, sb, mode);
+            } catch (IOException ignored) {
+            }
+
+            return null;
+        };
+        executor.submit(debugTask);
+    }
+
+    public static void debug(String fileName, String s, StandardOpenOption mode) {
+        Callable<Void> debugTask = () -> {
+            Path debug = Paths.get("").toAbsolutePath().resolve("logs/" + fileName);
+
+            try {
+                if (!Files.exists(debug)) {
+                    Files.createDirectories(debug.getParent());
+                    Files.createFile(debug);
+                }
+                Files.writeString(debug, s, mode);
             } catch (IOException ignored) {
             }
 
