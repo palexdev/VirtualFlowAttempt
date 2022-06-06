@@ -1,3 +1,3 @@
 My attempt at making a VirtualFlow API.
 
-Project Status: *Proof of Concept*
+Project Status: *Abandoned, replaced by [VirtualizedFX](https://github.com/palexdev/VirtualizedFX)* 
